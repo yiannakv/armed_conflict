@@ -104,12 +104,23 @@ regions2 <- subset(regions, country_code %in% countries$ISO)
 
 Next, we want to find out how many countries are in a region. Use the `group_by()` and `summarise()` functions in the `dplyr` package to count the number of countries in each region. Then use the `kable()` function in the `knitr` package to create a simple table with the column headers, "Region" and "Count". 
 
-<!-- Put code chunk here -->
+```{r}
+regions2a <- regions2 %>% group_by(region) %>% 
+                        summarise(Count = n()) %>% rename(Region = region)
+
+library(knitr)
+kable(regions2a)
+```
 
 
 Create a similar table that shows the number of countries in each **sub-region**.
 
-<!-- Put code chunk here -->
+```{r}
+regions2b <- regions2 %>% group_by(sub_region) %>% summarise(Count = n()) %>% 
+    rename('Sub Region' = sub_region)
+
+kable(regions2b)
+```
 
 
 
