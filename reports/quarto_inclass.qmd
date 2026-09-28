@@ -73,21 +73,31 @@ The **final goal** is to display a **bar chart** that depicts how many countries
 
 ```{r}
 #| echo: TRUE
-countries <- read.table("../data/raw/countries.txt", header = TRUE)
-## more code here
+countries <- read.table("data/raw/countries.txt", header = TRUE)
+
+nrow(countries)
+ncol(countries)
 
 ```
-*Replace this sentence with another sentence that states how many countries are included in the data set.*
+*There are 186 countires included in this dataset.*
 
 **Second**, read in `regions.txt` and also write a sentence that states how many countries are included in the data set.
 
-<!-- Put code chunk here -->
+```{r}
+regions <- read.table("data/raw/regions.txt", header = TRUE)
+nrow(regions)
+ncol(regions)
+
+```
+*There are 249 countries included in this datset*
 
 
 **Third**, subset the `regions` data set to only include countries from the `countries` data set.
 
-<!-- Put code chunk here -->
-
+```{r}
+library(dplyr)
+regions2 <- subset(regions, country_code %in% countries$ISO)
+```
 
 
 ## Tabulate countries by region and sub-region
