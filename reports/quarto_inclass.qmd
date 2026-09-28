@@ -132,5 +132,8 @@ Here, we will use `geom_bar()` function within `ggplot()` to create a bar chart 
 2. Create bars that run horizontally where sub-region names appear along the y-axis. 
 3. Order the bars such that the sub-region with the most number countries appear at the top and the sub-region with the least number of countries appear at the bottom. 
 
-<!-- Put code chunk here -->
-
+```{r}
+ggplot(regions2, aes(y = reorder(sub_region, sub_region, FUN = length), fill = region)) +
+  geom_bar() + labs(x="Number of Countries",  y= "Country", title="Countries Within each Sub Region",
+  fill="Region")
+```
