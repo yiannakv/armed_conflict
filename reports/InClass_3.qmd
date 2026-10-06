@@ -22,8 +22,8 @@ library(janitor)
 First we will read in the maternal_mortality CSV
 ```{r}
 #| echo: TRUE
-matmor0 <- read.csv("../data/raw/maternal_mortality.csv", header = TRUE)
-glimpse(matmor0)
+
+matmor0 <- read.csv("data/raw/maternal_mortality.csv", header = TRUE)
 ```
 
 We want to create a function that uses the below code pivots this to long form 
@@ -62,21 +62,21 @@ long_maternal <- long_form(matmor0, "maternal_mortaltiy")
 Now we will try with the other datasets! 
 ```{r}
 
-neonatal <- read.csv("../data/raw/neonatal_mortality.csv", header = TRUE)
+neonatal <- read.csv("data/raw/neonatal_mortality.csv", header = TRUE)
 neonatal_long <- long_form(neonatal, "Neonatal_Mortality")
 
 
-infant <- read.csv("../data/raw/infant_mortality.csv", header=TRUE)
+infant <- read.csv("data/raw/infant_mortality.csv", header=TRUE)
 infant_long <- long_form(infant, "Infant_Mortality")
 
-under5 <- read.csv("../data/raw/under5_mortality.csv", header=TRUE)
+under5 <- read.csv("data/raw/under5_mortality.csv", header=TRUE)
 under5_long <- long_form(under5, "Under5_Mortality")
 ```
 
 2. Prepare disaster data
 
 ```{r}
-disaster <- read.csv("../data/raw/disaster.csv", header=TRUE)
+disaster <- read.csv("data/raw/disaster.csv", header=TRUE)
 disaster1 <- clean_names(disaster)
 ```
 
@@ -115,19 +115,28 @@ kable(disaster_filter2|> slice(1:10))
 We are creating a binary variable to ascertain whether they had armed_conflict in that year 
 
 ```{r}
-conflict <- read.csv("C:/Users/iamvi/OneDrive - University of Toronto/Year 2/Computation for Health Data/armed_conflict/data/raw/conflict.csv", header=TRUE)
+conflict <- read.csv("data/raw/conflict.csv", header=TRUE)
 
 #we will need to create a binary_conflict variable for each year 1999 to 2018 (19 total)
 #first we need to filter and sum up the number of conflicts each year
 
 conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best))
 
-#now we are going to create a binary variable in which year is lagged 
+#now we will add onto this by creating a binary variable in which year is lagged 
 
 
-conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best, na.rm=TRUE))%>% mutate(binary_conflict = if_else(lead(total_conflicts)>0, 1, 0))
+conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best, na.rm=TRUE))%>% mutate(binary_conflict = if_else(lead(default = NA, total_conflicts)>24, 1, 0))
+#default is used in which the last year (2018) is coded as NA since we don't have data for that (need data from 2019). Conversely can remove it by making default=9999.  
+
+#recode binary as an integer or factor 
+conflict1$binary_conflict <- as.factor(conflict1$binary_conflict)
+
 ```
 
+```{r}
+conflict1$binary_conflict <- as.factor(conflict1$binary_conflict)
+
+```
 
 **MERGING ALL DATASETS** 
 We have:

@@ -1,0 +1,63 @@
+# Mortality data: reshape wide annual values to long format
+library(tidyverse)
+
+# This works whether the script is run from the project root or reports/.
+data_dir <- if (file.exists("data/raw/maternal_mortality.csv")) {
+  "data/raw"
+} else {
+  "../data/raw"
+}
+
+# 1a. Read the maternal-mortality data and convert it from wide to long form.
+maternal_mortality <- read_csv(file.path(data_dir, "maternal_mortality.csv"),
+                               show_col_types = FALSE)
+
+maternal_mortality_long_direct <- maternal_mortality |>
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "year",
+    names_prefix = "X",
+    values_to = "maternal_mortality"
+  ) |>
+  mutate(year = as.numeric(year)) |>
+  select(iso, year, maternal_mortality)
+
+# 1b. Reusable function for every mortality CSV with the same wide layout.
+wide_to_long_mortality <- function(data, value_name) {
+  data |>
+    pivot_longer(
+      cols = starts_with("X"),
+      names_to = "year",
+      names_prefix = "X",
+      values_to = value_name
+    ) |>
+    mutate(year = as.numeric(year)) |>
+    select(iso, year, all_of(value_name))
+}
+
+# Apply the function to each mortality data set.
+maternal_mortality_long <- wide_to_long_mortality(
+  maternal_mortality, "maternal_mortality"
+)
+
+infant_mortality <- read_csv(file.path(data_dir, "infant_mortality.csv"),
+                             show_col_types = FALSE)
+infant_mortality_long <- wide_to_long_mortality(
+  infant_mortality, "infant_mortality"
+)
+
+neonatal_mortality <- read_csv(file.path(data_dir, "neonatal_mortality.csv"),
+                               show_col_types = FALSE)
+neonatal_mortality_long <- wide_to_long_mortality(
+  neonatal_mortality, "neonatal_mortality"
+)
+
+under5_mortality <- read_csv(file.path(data_dir, "under5_mortality.csv"),
+                             show_col_types = FALSE)
+under5_mortality_long <- wide_to_long_mortality(
+  under5_mortality, "under5_mortality"
+)
+
+# Confirm the function reproduces the result from part 1a exactly.
+stopifnot(identical(maternal_mortality_long, maternal_mortality_long_direct))
+
