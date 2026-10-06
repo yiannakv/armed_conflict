@@ -1,0 +1,152 @@
+---
+title: "Week 3 - In Class"
+author: "Vicki Yiannakis"
+format: pdf
+geometry:
+      - top=30mm
+      - left=20mm
+      - heightrounded
+---
+```{r} 
+#| output: false
+#| include: false
+#| warning: false
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+install.packages("countrycode")
+library(countrycode)
+install.packages("janitor")
+library(janitor)
+```
+
+
+First we will read in the maternal_mortality CSV
+```{r}
+#| echo: TRUE
+matmor0 <- read.csv("data/raw/maternal_mortality.csv", header = TRUE)
+glimpse(matmor0)
+```
+
+We want to create a function that uses the below code pivots this to long form 
+```{r}
+# Change wide to long format
+matmor_long <- matmor0 |>
+  pivot_longer(cols = starts_with("X"), #selecting all cols that start with x 
+                 names_to = "year", #creating new variable called Year 
+                 names_prefix = "X", # removes X from year column (so only numerical shows)
+                 values_to = "maternal_mortality") |> #values of maternal mortality 
+  mutate(year = as.numeric(year)) |> # change year to numeric As it was stored as a character var
+  select(iso, year, maternal_mortality) #output data 
+```
+
+
+NOTES:
+names_prefix = A regular expression used to remove matching text from the start of each variable name.
+
+To create a function, we need to figure out our arguments 
+```{r}
+long_form <- function(x, varname) {
+    x|>
+    pivot_longer(cols = starts_with("X"), #selecting all cols that start with x 
+                 names_to = "year", #creating new variable called Year 
+                 names_prefix = "X", # removes X from year column (so only numerical shows)
+                 values_to = varname)|>
+        mutate(year = as.numeric(year)) |>
+        select(iso,year, all_of(varname)) #values of maternal mortality 
+} 
+
+#now we can try this in the original mortality data
+long_maternal <- long_form(matmor0, "maternal_mortaltiy")
+
+```
+
+Now we will try with the other datasets! 
+```{r}
+
+neonatal <- read.csv("data/raw/neonatal_mortality.csv", header = TRUE)
+neonatal_long <- long_form(neonatal, "Neonatal_Mortality")
+
+
+infant <- read.csv("data/raw/infant_mortality.csv", header=TRUE)
+infant_long <- long_form(infant, "Infant_Mortality")
+
+under5 <- read.csv("data/raw/under5_mortality.csv", header=TRUE)
+under5_long <- long_form(under5, "Under5_Mortality")
+```
+
+2. Prepare disaster data
+
+```{r}
+disaster <- read.csv("data/raw/disaster.csv", header=TRUE)
+disaster1 <- clean_names(disaster)
+```
+
+Now we will filter to only include the variables we need
+Make sure to check variable types! 
+
+```{r}
+class(disaster1$year)
+class(disaster1$disaster_type)
+
+```
+
+```{r|}
+
+disaster_filter <- disaster1 %>% filter(year >= 2009 & year <= 2019,
+                                        disaster_type == "Earthquake" | 
+                                            disaster_type == "Drought") %>% 
+                    select(year, iso, disaster_type)
+
+kable(disaster_filter|> slice(1:10))                                
+```
+
+Create a dummy variable! 
+```{r}
+disaster_filter2 <- disaster_filter %>% 
+    mutate(earthquake = if_else(disaster_type=="Earthquake", 1, 0),
+           drought = if_else(disaster_type=="Drought", 1, 0)) %>%
+                    mutate((across(where(is.numeric), as.integer)))
+                                                
+
+kable(disaster_filter2|> slice(1:10))
+```
+
+3. Prepare the disaster data file 
+
+We are creating a binary variable to ascertain whether they had armed_conflict in that year 
+
+```{r}
+conflict <- read.csv("data/raw/conflict.csv", header=TRUE)
+
+#we will need to create a binary_conflict variable for each year 1999 to 2018 (19 total)
+#first we need to filter and sum up the number of conflicts each year
+
+conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best))
+
+#now we are going to create a binary variable in which year is lagged 
+
+
+conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best, na.rm=TRUE))%>% mutate(binary_conflict = if_else(lead(total_conflicts)>0, 1, 0))
+```
+
+
+**MERGING ALL DATASETS** 
+We have:
+- conflict1 
+- disaster_filter2
+- infant_long
+- matmor_long
+- neonatal_long
+- under5_long
+They all have the ISO term. Hence they will be merged this way 
+
+```{r}
+full_dataset_list <- list(matmor_long, neonatal_long, infant_long, under5_long, disaster_filter2, conflict1)
+
+merged_all <- full_dataset_list %>% reduce(full_join, by = c("iso", "year"))
+
+#save as a CSV file and add to proccessed folder 
+write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
+
+
