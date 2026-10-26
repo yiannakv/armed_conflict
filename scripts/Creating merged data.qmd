@@ -130,19 +130,13 @@ conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(be
 #now we will add onto this by creating a binary variable in which year is lagged 
 
 
-conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best, na.rm=TRUE))%>% mutate(binary_conflict = if_else(lead(default = NA, total_conflicts)>24, 1, 0))
+conflict1 <- conflict %>% group_by(iso,year)%>% summarise(total_conflicts=sum(best, na.rm=TRUE))%>% mutate(armed_conflict = if_else(total_conflicts >24, 1, 0)) %>% mutate(year=year+1)
 #default is used in which the last year (2018) is coded as NA since we don't have data for that (need data from 2019). Conversely can remove it by making default=9999.  
 
 #recode binary as an integer or factor 
-conflict1$binary_conflict <- as.factor(conflict1$binary_conflict)
+conflict1$armed_conflict <- as.factor(conflict1$armed_conflict)
 
 ```
-
-```{r}
-conflict1$binary_conflict <- as.factor(conflict1$binary_conflict)
-
-```
-
 
 We need to add in the covariate file as well so we can merge it with the others!
 ```{r}
@@ -171,9 +165,4 @@ write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
 
 ```
 
-Please see CodexTrial R file under reports to see comparison of Codex and overall thoughts! 
-
-```{r}
-merged_all %>%
-  count(iso, year) %>%
-  filter(n > 1)
+Please see Codex_Script.R under scripts to view comparison of Codex and overall thoughts! 

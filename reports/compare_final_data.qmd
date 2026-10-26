@@ -49,9 +49,9 @@ bind_rows(
   kable(caption = "Structural comparison of the two output files")
 ```
 
-The Codex output is one row per country-year. The original output has
-additional rows and duplicated country-year keys. These duplicates arise when more than one disaster record survives the merge: the original file retains`disaster_type`, whereas the Codex script collapses disaster records to the
-binary `earthquake` and `drought` indicators before merging.
+Both outputs now have one row per country-year. The corrected original file
+has the same 2000--2019 analysis frame as the Codex output, with no duplicated
+country-year keys.
 
 ```{r}
 all_columns <- union(names(codex), names(original))
@@ -64,9 +64,10 @@ tibble(
 ```
 
 The Codex output uses consistent lower-case mortality names and adds
-`armed_conflict`. The original output instead includes `disaster_type`,
-`total_conflicts`, and `binary_conflict`; its mortality variable names retain
-capital letters. Both outputs include all eight covariates: `gdp_1000`,
+`armed_conflict`. The original output instead retains `total_conflicts` and
+`binary_conflict`; its mortality variable names retain capital letters. Both
+outputs include the earthquake and drought indicators and all eight covariates:
+`gdp_1000`,
 `oecd`, `pop_dens`, `urban`, `age_dep`, `male_edu`, `temp`, and
 `rainfall_1000`.
 
@@ -87,41 +88,22 @@ tibble(
   kable(caption = "Overlap in country-year keys")
 ```
 
-The Codex script keeps the mortality data's 2000--2019 country-year frame.
-The original file also contains 1999 records because its full join preserves
-conflict data outside the mortality period.
+The two files have identical country-year coverage after the disaster merge
+was corrected. Therefore, each comparison in the next section is a direct
+one-to-one comparison of the same country-year records.
 
 ## Agreement in comparable variables
 
-For a fair value comparison, the original file is reduced to one row per
-country-year. Repeated mortality and covariate values are represented by their
-first non-missing value, while each disaster indicator is set to one if any
-row for that country-year contains a one. This does not alter the source file;
-it is only used for this comparison.
+The corrected original file already has one row per country-year. Its mortality
+variable names are harmonised below solely to permit a direct comparison with
+the Codex output; neither source dataset is altered.
 
 ```{r}
-first_non_missing <- function(x) {
-  non_missing <- x[!is.na(x)]
-  if (length(non_missing) == 0) NA else non_missing[[1]]
-}
-
-original_key_level <- original |>
+original_harmonised <- original |>
   rename(
     neonatal_mortality = Neonatal_Mortality,
     infant_mortality = Infant_Mortality,
     under5_mortality = Under5_Mortality
-  ) |>
-  group_by(iso, year) |>
-  summarise(
-    across(
-      c(maternal_mortality, neonatal_mortality, infant_mortality,
-        under5_mortality, gdp_1000, oecd, pop_dens, urban, age_dep,
-        male_edu, temp, rainfall_1000),
-      first_non_missing
-    ),
-    earthquake = as.integer(any(earthquake == 1, na.rm = TRUE)),
-    drought = as.integer(any(drought == 1, na.rm = TRUE)),
-    .groups = "drop"
   )
 
 comparable_variables <- c(
@@ -133,7 +115,7 @@ comparable_variables <- c(
 comparison_data <- codex |>
   select(iso, year, all_of(comparable_variables)) |>
   inner_join(
-    original_key_level |> select(iso, year, all_of(comparable_variables)),
+    original_harmonised |> select(iso, year, all_of(comparable_variables)),
     by = c("iso", "year"), suffix = c("_codex", "_original")
   )
 
@@ -153,13 +135,13 @@ agreement <- map_dfr(comparable_variables, function(variable) {
 
 ```{r}
 agreement |>
-  kable(caption = "Value agreement after harmonising the original file to country-year level")
+  kable(caption = "Value agreement across matched country-year records")
 ```
 
 The mortality measures and covariates should agree wherever both files have a
 value because they originate from the same raw CSV files. Any remaining
-differences in `earthquake` or `drought` identify a difference in how the
-multiple disaster records were combined.
+differences in `earthquake` or `drought` now identify a difference in the
+respective coding rules rather than duplicate disaster records.
 
 ## Conflict variables
 
@@ -173,9 +155,8 @@ expected and reflect the construction rule, not a merge error.
 
 ## Conclusion
 
-The Codex output is the cleaner analysis-ready version: it has a unique
-country-year key, explicit zeroes for absent disaster and conflict events, and
-includes the requested covariates. The original output preserves extra
-intermediate variables and event-level duplication, which is useful for
-checking the original transformations but requires further aggregation before
-country-year analysis.
+Both outputs are now analysis-ready at the country-year level: they have the
+same coverage, unique country-year keys, disaster indicators, and the requested
+covariates. The remaining substantive distinction is the conflict measure:
+the Codex output provides a single lagged `armed_conflict` indicator, while the
+original output retains `total_conflicts` and `binary_conflict`.
