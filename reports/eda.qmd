@@ -1,0 +1,154 @@
+---
+title: "CHL5233: Exploratory Data Analaysis - Merged_Data"
+author: "Vicki Yiannakis"
+format: 
+  pdf:
+    geometry:
+      - top=30mm
+      - left=20mm
+      - heightrounded
+---
+
+```{r} 
+#| echo: FALSE
+#| output: FALSE
+
+library(janitor)
+install.packages("tinytable")
+library(tinytable)
+library(dplyr)
+library(ggplot2)
+
+```
+
+The goal of this report is to preform the preliminary data analysis in preparation for the panel regression we will be conducting. We are examining the association between armed conflict and several mortality outcomes. 
+
+EXPOSURE = Armed Conflict (Binary -- Y(1), N(0))
+OUTCOME(S) = Rates per 100,000 live births (Continuous) 
+1. Maternal Mortality 
+2. Neonatal Mortality 
+3. Infant Mortality 
+4. Under 5 Mortality 
+
+We will begin by examining the variable types, names, and summary statistics. 
+
+```{r} 
+#| echo: TRUE
+
+raw_data <- read.csv("data/processed/Merged_Data.csv", header=TRUE) |>
+    clean_names()
+
+head(raw_data)
+```
+
+```{r}
+tail(raw_data)
+```
+
+```{r}
+slice_sample(raw_data, n=6)
+```
+
+Now we can look at the variable types
+
+```{r}
+#| echo: TRUE
+#| output: TRUE
+glimpse(raw_data)
+```
+
+
+We see that the mortality variables are dbl = numeric with decimal places. We see amed conflict is an integer. 
+
+Total conflicts is also an integer, same with OECD, and year. 
+
+The rest of the covariates are dbl --> which algin. 
+
+```{r}
+#| echo: TRUE
+summary(raw_data)
+```
+
+We can summize the following:
+- Year is between 2009 to 2019 
+- Maternal mortality has a very high max (2480 deaths per 100 000)
+- There are NAs for infant under 5, and neonatal (20) 
+- There are 426 NAs for maternal mortality 
+- armed conflict has no NA values 
+- There appears to be no 'abnormal' negative values for the covariates and such 
+
+##Distribution of Outcomes##
+We can create a histogram for this (for each mortality variable)
+
+```{r}
+#| echo: TRUE 
+#| output: TRUE
+
+ggplot(raw_data, aes(x = maternal_mortality)) +
+  geom_histogram()
+```
+
+- We can see its very right skewed
+- Very few "high" observations making it difficult to see majority of the observation values that lie in the lower range
+- We can use log transform to look at **relative differences**. Shrink the scale to make it easier to examine.
+
+```{r}
+#| echo: TRUE
+#| output: TRUE 
+ggplot(raw_data, aes(x = maternal_mortality)) +
+  geom_histogram()+
+  scale_x_log10()
+
+```
+
+Clearly we can see that mortality rates are very right skewed as most concentrate in the lower value range. small number of observations at very high rates. 
+
+
+```{r}
+ggplot(raw_data, aes(x = neonatal_mortality)) +
+  geom_histogram()
+
+ggplot(raw_data, aes(x = neonatal_mortality)) +
+  geom_histogram()+
+  scale_x_log10()
+```
+
+Here we can see a lot of neonatal mortality is on the slightly higher end value wise. 
+
+```{r}
+ggplot(raw_data, aes(x = infant_mortality)) +
+  geom_histogram()
+
+ggplot(raw_data, aes(x = infant_mortality)) +
+  geom_histogram()+
+  scale_x_log10()
+```
+
+Similar to neonatal mortality
+```{r}
+ggplot(raw_data, aes(x = under5_mortality)) +
+  geom_histogram()
+
+ggplot(raw_data, aes(x = under5_mortality)) +
+  geom_histogram()+
+  scale_x_log10()
+```
+
+Clearly we see maternal mortality is much lower compared to younger-onset mortality (infant, neonatal, under5)
+
+##Examine maternal mortality##
+
+```{r}
+summary(raw_data$maternal_mortality)
+
+#lets examine the max observation 
+
+raw_data %>%
+  filter(maternal_mortality == max(maternal_mortality, na.rm = TRUE))
+```
+
+Based on that observation -> SLE (Sierra Leonne), had 4493 conflicts 
+Let's confirm with the raw data. Seems to be the case. very consistently high across all years. This is why the data is super skewed. 
+
+Some background research --> Sierra Leonne civil war that occured during that time. 
+

@@ -138,25 +138,54 @@ agreement |>
   kable(caption = "Value agreement across matched country-year records")
 ```
 
-The mortality measures and covariates should agree wherever both files have a
-value because they originate from the same raw CSV files. Any remaining
-differences in `earthquake` or `drought` now identify a difference in the
-respective coding rules rather than duplicate disaster records.
+The mortality measures and covariates agree wherever both files have a value,
+because they originate from the same raw CSV files. The apparent differences
+in `earthquake` and `drought` are a missingness convention: the Codex file
+codes a country-year with no disaster record as `0`, whereas the original file
+codes it as `NA`. The disaster-event rows (`1`) agree. This convention matters
+for modelling because `NA` values may cause observations to be excluded,
+whereas `0` explicitly represents no recorded event.
 
 ## Conflict variables
 
-The conflict indicators are not compared as identical columns because they
-encode different definitions. `armed_conflict` in the Codex output first sums
-battle-related deaths within each conflict-country-year, classifies a conflict
-when the total is at least 25 deaths, and then lags that exposure by one year.
-The original output retains `total_conflicts` and `binary_conflict` alongside
-the merged records. Consequently, differences in these conflict fields are
-expected and reflect the construction rule, not a merge error.
+The corrected original file now includes an `armed_conflict` indicator, so it
+can be compared directly with the Codex indicator.
+
+```{r}
+conflict_comparison <- codex |>
+  select(iso, year, armed_conflict_codex = armed_conflict) |>
+  inner_join(
+    original |> select(iso, year, armed_conflict_original = armed_conflict),
+    by = c("iso", "year")
+  ) |>
+  mutate(matches = armed_conflict_codex == armed_conflict_original)
+
+tibble(
+  country_years_compared = nrow(conflict_comparison),
+  matching_indicators = sum(conflict_comparison$matches),
+  differing_indicators = sum(!conflict_comparison$matches)
+) |>
+  kable(caption = "Agreement in the armed-conflict indicator")
+```
+
+```{r}
+conflict_comparison |>
+  filter(!matches) |>
+  arrange(iso, year) |>
+  kable(caption = "Country-years with different armed-conflict values")
+```
+
+The remaining disagreements are limited to 13 country-years. They likely
+reflect the point at which the 25-death threshold is applied: the Codex script
+applies it to each conflict-country-year before combining conflicts, whereas
+the original calculation may apply it after summing conflicts within a
+country-year.
 
 ## Conclusion
 
 Both outputs are now analysis-ready at the country-year level: they have the
-same coverage, unique country-year keys, disaster indicators, and the requested
-covariates. The remaining substantive distinction is the conflict measure:
-the Codex output provides a single lagged `armed_conflict` indicator, while the
-original output retains `total_conflicts` and `binary_conflict`.
+same coverage, unique country-year keys, matching mortality and covariate
+values, and the requested covariates. The only substantive differences are the
+disaster missingness convention (`0` in Codex versus `NA` in the original) and
+the armed-conflict indicator in 13 country-years. Column-name differences and
+the representation of missing values are otherwise formatting differences.
