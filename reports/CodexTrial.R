@@ -157,3 +157,10 @@ write_csv(
 # something I missed (and have since changed) in my own code. 
 # correct formatting of table! However year has decimals 
 
+#for part d) successfully created a CSV that was placed in processed folder
+
+#had to overall be very specific with my prompts (exactly which data, where) 
+#sometimes the way it did the code was a bit different then how i did but outcome overall same 
+#Both codes are correct, but I prefer my own as its not as many lines of code (more straight forward) 
+#would use codex again but definetly need to double check the code and output 
+

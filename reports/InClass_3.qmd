@@ -157,3 +157,5 @@ merged_all <- full_dataset_list %>% reduce(full_join, by = c("iso", "year"))
 write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
 
 ```
+
+Please see CodexTrial R file under reports to see comparison of Codex and overall thoughts! 
