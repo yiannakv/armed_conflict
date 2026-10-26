@@ -1,0 +1,181 @@
+---
+title: "Comparison of Final Merged Data Sets"
+format:
+  html:
+    toc: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+## Purpose
+
+This report compares the dataset produced by `Codex_Script.R`
+(`Codex_Script_MergedData.csv`) with the original dataset
+(`Merged_Data.csv`). Both files are read directly from `data/processed`, so
+the tables update automatically if either file is regenerated.
+
+```{r}
+#| label: setup
+library(dplyr)
+library(tidyr)
+library(readr)
+library(purrr)
+library(knitr)
+
+processed_dir <- if (dir.exists("data/processed")) "data/processed" else "../data/processed"
+codex <- read_csv(file.path(processed_dir, "Codex_Script_MergedData.csv"), show_col_types = FALSE)
+original <- read_csv(file.path(processed_dir, "Merged_Data.csv"), show_col_types = FALSE)
+
+dataset_summary <- function(data, dataset) {
+  tibble(
+    dataset = dataset, rows = nrow(data), columns = ncol(data),
+    countries = n_distinct(data$iso),
+    first_year = min(data$year, na.rm = TRUE), last_year = max(data$year, na.rm = TRUE),
+    unique_country_years = nrow(distinct(data, iso, year)),
+    duplicated_country_year_rows = sum(duplicated(data[c("iso", "year")]))
+  )
+}
+```
+
+## Dataset structure
+
+```{r}
+bind_rows(
+  dataset_summary(codex, "Codex script"),
+  dataset_summary(original, "Original script")
+) |>
+  kable(caption = "Structural comparison of the two output files")
+```
+
+The Codex output is one row per country-year. The original output has
+additional rows and duplicated country-year keys. These duplicates arise when more than one disaster record survives the merge: the original file retains`disaster_type`, whereas the Codex script collapses disaster records to the
+binary `earthquake` and `drought` indicators before merging.
+
+```{r}
+all_columns <- union(names(codex), names(original))
+tibble(
+  variable = all_columns,
+  in_codex_output = all_columns %in% names(codex),
+  in_original_output = all_columns %in% names(original)
+) |>
+  kable(caption = "Variables included in each output file")
+```
+
+The Codex output uses consistent lower-case mortality names and adds
+`armed_conflict`. The original output instead includes `disaster_type`,
+`total_conflicts`, and `binary_conflict`; its mortality variable names retain
+capital letters. Both outputs include all eight covariates: `gdp_1000`,
+`oecd`, `pop_dens`, `urban`, `age_dep`, `male_edu`, `temp`, and
+`rainfall_1000`.
+
+## Country-year coverage
+
+```{r}
+codex_keys <- codex |> distinct(iso, year)
+original_keys <- original |> distinct(iso, year)
+
+tibble(
+  comparison = c("Country-years in both files", "Only in Codex output", "Only in original output"),
+  n_country_years = c(
+    nrow(inner_join(codex_keys, original_keys, by = c("iso", "year"))),
+    nrow(anti_join(codex_keys, original_keys, by = c("iso", "year"))),
+    nrow(anti_join(original_keys, codex_keys, by = c("iso", "year")))
+  )
+) |>
+  kable(caption = "Overlap in country-year keys")
+```
+
+The Codex script keeps the mortality data's 2000--2019 country-year frame.
+The original file also contains 1999 records because its full join preserves
+conflict data outside the mortality period.
+
+## Agreement in comparable variables
+
+For a fair value comparison, the original file is reduced to one row per
+country-year. Repeated mortality and covariate values are represented by their
+first non-missing value, while each disaster indicator is set to one if any
+row for that country-year contains a one. This does not alter the source file;
+it is only used for this comparison.
+
+```{r}
+first_non_missing <- function(x) {
+  non_missing <- x[!is.na(x)]
+  if (length(non_missing) == 0) NA else non_missing[[1]]
+}
+
+original_key_level <- original |>
+  rename(
+    neonatal_mortality = Neonatal_Mortality,
+    infant_mortality = Infant_Mortality,
+    under5_mortality = Under5_Mortality
+  ) |>
+  group_by(iso, year) |>
+  summarise(
+    across(
+      c(maternal_mortality, neonatal_mortality, infant_mortality,
+        under5_mortality, gdp_1000, oecd, pop_dens, urban, age_dep,
+        male_edu, temp, rainfall_1000),
+      first_non_missing
+    ),
+    earthquake = as.integer(any(earthquake == 1, na.rm = TRUE)),
+    drought = as.integer(any(drought == 1, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+comparable_variables <- c(
+  "maternal_mortality", "neonatal_mortality", "infant_mortality",
+  "under5_mortality", "earthquake", "drought", "gdp_1000", "oecd",
+  "pop_dens", "urban", "age_dep", "male_edu", "temp", "rainfall_1000"
+)
+
+comparison_data <- codex |>
+  select(iso, year, all_of(comparable_variables)) |>
+  inner_join(
+    original_key_level |> select(iso, year, all_of(comparable_variables)),
+    by = c("iso", "year"), suffix = c("_codex", "_original")
+  )
+
+agreement <- map_dfr(comparable_variables, function(variable) {
+  codex_value <- comparison_data[[paste0(variable, "_codex")]]
+  original_value <- comparison_data[[paste0(variable, "_original")]]
+  tibble(
+    variable = variable,
+    matched_non_missing = sum(!is.na(codex_value) & !is.na(original_value)),
+    equal_values = sum(!is.na(codex_value) & !is.na(original_value) & abs(codex_value - original_value) < 1e-10),
+    differing_values = sum(!is.na(codex_value) & !is.na(original_value) & abs(codex_value - original_value) >= 1e-10),
+    missing_only_in_codex = sum(is.na(codex_value) & !is.na(original_value)),
+    missing_only_in_original = sum(!is.na(codex_value) & is.na(original_value))
+  )
+})
+```
+
+```{r}
+agreement |>
+  kable(caption = "Value agreement after harmonising the original file to country-year level")
+```
+
+The mortality measures and covariates should agree wherever both files have a
+value because they originate from the same raw CSV files. Any remaining
+differences in `earthquake` or `drought` identify a difference in how the
+multiple disaster records were combined.
+
+## Conflict variables
+
+The conflict indicators are not compared as identical columns because they
+encode different definitions. `armed_conflict` in the Codex output first sums
+battle-related deaths within each conflict-country-year, classifies a conflict
+when the total is at least 25 deaths, and then lags that exposure by one year.
+The original output retains `total_conflicts` and `binary_conflict` alongside
+the merged records. Consequently, differences in these conflict fields are
+expected and reflect the construction rule, not a merge error.
+
+## Conclusion
+
+The Codex output is the cleaner analysis-ready version: it has a unique
+country-year key, explicit zeroes for absent disaster and conflict events, and
+includes the requested covariates. The original output preserves extra
+intermediate variables and event-level duplication, which is useful for
+checking the original transformations but requires further aggregation before
+country-year analysis.

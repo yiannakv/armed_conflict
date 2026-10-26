@@ -91,7 +91,7 @@ class(disaster1$disaster_type)
 
 ```{r}
 
-disaster_filter <- disaster1 %>% filter(year >= 2009 & year <= 2019,
+disaster_filter <- disaster1 %>% filter(year >= 2000 & year <= 2019,
                                         disaster_type == "Earthquake" | 
                                             disaster_type == "Drought") %>% 
                     select(year, iso, disaster_type)
@@ -104,7 +104,12 @@ Create a dummy variable!
 disaster_filter2 <- disaster_filter %>% 
     mutate(earthquake = if_else(disaster_type=="Earthquake", 1, 0),
            drought = if_else(disaster_type=="Drought", 1, 0)) %>%
-                    mutate((across(where(is.numeric), as.integer)))
+                    mutate(across(where(is.numeric), as.integer)) %>%
+        group_by(year, iso) %>%
+        summarize( #for each group (duplicate rows)
+    earthquake = max(earthquake), #take max value of earthquake 
+    drought = max(drought), #take max value of drought 
+    .groups = "drop") #drop the groupings
                                                 
 
 kable(disaster_filter2|> slice(1:10))
@@ -159,7 +164,7 @@ They all have the ISO term. Hence they will be merged this way
 ```{r}
 full_dataset_list <- list(matmor_long, neonatal_long, infant_long, under5_long, disaster_filter2, conflict1, covariates)
 
-merged_all <- full_dataset_list %>% reduce(full_join, by = c("iso", "year"))
+merged_all <- full_dataset_list %>% reduce(left_join, by = c("iso", "year"))
 
 #save as a CSV file and add to proccessed folder 
 write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
@@ -167,3 +172,8 @@ write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
 ```
 
 Please see CodexTrial R file under reports to see comparison of Codex and overall thoughts! 
+
+```{r}
+merged_all %>%
+  count(iso, year) %>%
+  filter(n > 1)
