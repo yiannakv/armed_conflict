@@ -138,6 +138,13 @@ conflict1$binary_conflict <- as.factor(conflict1$binary_conflict)
 
 ```
 
+
+We need to add in the covariate file as well so we can merge it with the others!
+```{r}
+covariates <- read.csv("data/raw/covariates.csv", header=TRUE)
+
+```
+
 **MERGING ALL DATASETS** 
 We have:
 - conflict1 
@@ -146,10 +153,11 @@ We have:
 - matmor_long
 - neonatal_long
 - under5_long
+- covariates 
 They all have the ISO term. Hence they will be merged this way 
 
 ```{r}
-full_dataset_list <- list(matmor_long, neonatal_long, infant_long, under5_long, disaster_filter2, conflict1)
+full_dataset_list <- list(matmor_long, neonatal_long, infant_long, under5_long, disaster_filter2, conflict1, covariates)
 
 merged_all <- full_dataset_list %>% reduce(full_join, by = c("iso", "year"))
 
