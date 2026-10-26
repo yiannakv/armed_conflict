@@ -18,6 +18,7 @@ install.packages("tinytable")
 library(tinytable)
 library(dplyr)
 library(ggplot2)
+library(naniar)
 
 ```
 
@@ -152,3 +153,42 @@ Let's confirm with the raw data. Seems to be the case. very consistently high ac
 
 Some background research --> Sierra Leonne civil war that occured during that time. 
 
+##EXAMINE FREQUENCY OF OUTCOME WITHIN EACH##
+Now we will explore the proportion of 'armed_conflict' overall 
+
+First we convert to a factor variable rather than numerical 
+
+```{r}
+#| echo: TRUE
+#| output: FALSE
+conflict_data <- raw_data |> mutate(armed_conflict=as.factor(armed_conflict)) 
+summary(conflict_data$armed_conflict) #for counts 
+prop.table(table(conflict_data$armed_conflict)) #for proportions 
+```
+
+81 % of countries across all years did not experience an armed conflict
+18.9% experienced an armed conflict 
+This is overall so we can get the prop by year 
+
+```{r}
+#| echo: TRUE
+#| output: TRUE
+
+yearly <- conflict_data %>% group_by(year) %>% 
+    summarize(percent_conflict = 100*mean(armed_conflict==1, na.rm=TRUE))
+#na.rm = true just means include na observations (there aren't any i believe)
+
+
+ggplot(yearly, aes(x = year, y = percent_conflict)) +
+  geom_bar(stat = "identity") #identity to make bar height reflect the percentages in y.Can also use geom_col()
+
+```
+
+##MISSING DATA## 
+
+Now we need to examine the missingness within each variable. We will pay particular close attention to our exposure and outcomes of itnerest. 
+
+
+```{r}
+pct_miss(conflict_data)
+```
