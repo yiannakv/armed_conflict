@@ -15,13 +15,12 @@ format:
 #| message: FALSE
 
 library(janitor)
-install.packages("tinytable")
 library(tinytable)
 library(dplyr)
 library(ggplot2)
 library(naniar)
 library(tidyr)
-library(kable)
+library(knitr)
 
 ```
 
@@ -39,7 +38,7 @@ We will begin by examining the variable types, names, and summary statistics.
 ```{r} 
 #| echo: TRUE
 
-raw_data <- read.csv("data/processed/Merged_Data.csv", header=TRUE) |>
+raw_data <- read.csv("C:/Users/iamvi/OneDrive - University of Toronto/Year 2/Computation for Health Data/armed_conflict/data/processed/Merged_Data.csv", header=TRUE) |>
     clean_names()
 
 head(raw_data)
@@ -238,7 +237,7 @@ We should explore the earthquake and drought, by exposure and outcome to determi
 
 
 ```{r}
-#| error: FALSE
+#| warning: FALSE
 #| output: TRUE 
 gg_miss_upset(conflict_data)
 ```
@@ -252,6 +251,7 @@ This is likely actually due to the way we had coded the earthquake and drought v
 
 
 ```{r}
+#| warning: false 
 conflict_data_recode <- conflict_data %>%
   mutate(
     earthquake = replace_na(earthquake, 0),
