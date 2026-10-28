@@ -12,6 +12,7 @@ format:
 ```{r} 
 #| echo: FALSE
 #| output: FALSE
+#| message: FALSE
 
 library(janitor)
 install.packages("tinytable")
@@ -19,6 +20,8 @@ library(tinytable)
 library(dplyr)
 library(ggplot2)
 library(naniar)
+library(tidyr)
+library(kable)
 
 ```
 
@@ -78,7 +81,15 @@ We can summize the following:
 - armed conflict has no NA values 
 - There appears to be no 'abnormal' negative values for the covariates and such 
 
-##Distribution of Outcomes##
+#quick check for duplicated rows#
+
+```{r}
+sum(duplicated(raw_data))
+```
+
+There are none, so we are good to go! 
+
+**##Distribution of Outcomes**
 We can create a histogram for this (for each mortality variable)
 
 ```{r}
@@ -137,7 +148,7 @@ ggplot(raw_data, aes(x = under5_mortality)) +
 
 Clearly we see maternal mortality is much lower compared to younger-onset mortality (infant, neonatal, under5)
 
-##Examine maternal mortality##
+**##Examine maternal mortality**
 
 ```{r}
 summary(raw_data$maternal_mortality)
@@ -153,7 +164,7 @@ Let's confirm with the raw data. Seems to be the case. very consistently high ac
 
 Some background research --> Sierra Leonne civil war that occured during that time. 
 
-##EXAMINE FREQUENCY OF OUTCOME WITHIN EACH##
+**##EXAMINE FREQUENCY OF OUTCOME WITHIN EACH##**
 Now we will explore the proportion of 'armed_conflict' overall 
 
 First we convert to a factor variable rather than numerical 
@@ -184,11 +195,173 @@ ggplot(yearly, aes(x = year, y = percent_conflict)) +
 
 ```
 
-##MISSING DATA## 
+**##MISSING DATA**
 
-Now we need to examine the missingness within each variable. We will pay particular close attention to our exposure and outcomes of itnerest. 
+Now we need to examine the missingness within each variable. We will pay particular close attention to our exposure and outcomes of interest. 
+
+```{r}
+pct_miss_case(conflict_data)
+```
+
+85% of cases have some sort of missing value 
 
 
 ```{r}
-pct_miss(conflict_data)
+#| echo: TRUE
+#| output: TRUE
+gg_miss_var(conflict_data, show_pct=TRUE)
+```
+
+Clearly we can see:
+- Earthquake and drought have high missingness counts
+- our exposure (armed conflict) seems to have no missing data (yay)
+- Some outcomes have missing data (maternal_mortalityu, under5, neonatal, infant)
+
+Lets quantify the exact amount however for the exposure and outcomes. 
+
+```{r}
+missing_table <- data.frame(
+  Variable = names(conflict_data),
+  Missing_n = colSums(is.na(conflict_data)),
+  Missing_pct = round(colMeans(is.na(conflict_data)) * 100, 1))
+
+#format it in a nice table 
+kable(
+  missing_table,
+  col.names = c("Variable", "Missing (n)", "Missing (%)"),
+  caption = "Missingness quanitified by variable"
+)
+```
+
+
+We should explore the earthquake and drought, by exposure and outcome to determine the reason for missingness (MNAR, MAR, MCAR) 
+
+
+```{r}
+#| error: FALSE
+#| output: TRUE 
+gg_miss_upset(conflict_data)
+```
+
+This upset plot helps us see whether variables tend to be missing together. Earthquake and drought seem to be. 
+Set size = number of missing observations. Interaction size is how many they have in common. 
+
+This plot seems to suggest that earthquake and drought are missing together, which may indicate we should explore why. 
+
+This is likely actually due to the way we had coded the earthquake and drought variables. Since when we merged all the final data sets, any countries that had no earthquake or drought, were just coded as NA. 
+
+
+```{r}
+conflict_data_recode <- conflict_data %>%
+  mutate(
+    earthquake = replace_na(earthquake, 0),
+    drought = replace_na(drought, 0)
+  )
+gg_miss_upset(conflict_data_recode)
+
+```
+
+Now for maternal mortality, let's try to explore the reasons for missingness. Seem to potentially not have that data available. Lets look at these observations closely: 
+
+
+```{r}
+conflict_data_recode %>%
+  filter(is.na(maternal_mortality)) %>%
+  count(iso, sort = TRUE)
+```
+
+So this tells us countries with AND, DMA, and MHL iso codes have 20 missing values. 
+DMA = Dominica
+MHL = Marshall Islands
+AND = Andorra
+
+
+```{r}
+conflict_data_recode %>%
+  filter(is.na(maternal_mortality)) %>%
+  count(year, sort = TRUE)
+```
+
+Majority in 2018 and 2019. 
+
+Overall we can say:
+*Missing maternal mortality data were concentrated in specific countries (Andorra, Dominica, and Marshall Islands) and primarily occurred in 2018 and 2019. Because the missingness appears related to observed characteristics of the data (country and year), it is unlikely to be Missing Completely At Random (MCAR) and is more consistent with a Missing At Random (MAR). We will likely retain these covariates regardless.*
+
+**##Dealing with Missing Data!**
+
+We will use a complete case analysis approach to remove observations that are missing any of the outcomes and exposures. 
+
+```{r}
+conflict_data_1 <- conflict_data %>% 
+  drop_na(c(maternal_mortality, neonatal_mortality, infant_mortality, under5_mortality))
+
+
+nrow(conflict_data_1)
+```
+
+Therefore we can see a total of 444 observations were removed. We will likely use sensitivity analyses later on to check this decision. 
+
+##Understanding relationships between variables## 
+
+```{r}
+#| echo: TRUE
+#| output: TRUE 
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = maternal_mortality, alpha = 0.1)) +
+  geom_boxplot()
+
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = maternal_mortality, alpha = 0.1)) +
+  geom_violin()+
+  geom_boxplot(width=0.1)
+
+```
+
+We do see the median maternal mortality is lower among no armed conflict, compared to armed conflict. Suggest country years with armed conflict have higher mortatlity (maternal)
+
+Conflict group has a greater spread (values extend high). Seem to be very skewed (most groups are on the lowe rend but there is a tail on the higher end)
+
+
+```{r}
+#| echo: TRUE
+#| output: TRUE 
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = neonatal_mortality, alpha = 0.1)) +
+  geom_boxplot()
+
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = neonatal_mortality, alpha = 0.1)) +
+  geom_violin()+
+  geom_boxplot(width=0.1)
+
+```
+
+Similar trends for neonatal in terms of median in armed 0 vs 1. However much more higher values, not as skewed. 
+
+```{r}
+#| echo: TRUE
+#| output: TRUE 
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = infant_mortality, alpha = 0.1)) +
+  geom_boxplot()
+
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = infant_mortality, alpha = 0.1)) +
+  geom_violin()+
+  geom_boxplot(width=0.1)
+
+```
+
+```{r}
+#| echo: TRUE
+#| output: TRUE 
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = under5_mortality, alpha = 0.1)) +
+  geom_boxplot()
+
+conflict_data_1 |>
+  ggplot(aes(x = armed_conflict, y = under5_mortality, alpha = 0.1)) +
+  geom_violin()+
+  geom_boxplot(width=0.1)
+
 ```
