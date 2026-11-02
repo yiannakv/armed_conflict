@@ -29,7 +29,7 @@ table1(~ pop_dens + gdp_1000 + age_dep + male_edu + temp + rainfall_1000 + urban
          oecd + earthquake + drought | armed_conflict, data=df_clean)
 
 
-#we will fix this to now include captions, and only median
+#we will fix this to now include captions, and only mean
 my.render.cont <- function(x) {
     with(stats.apply.rounding(stats.default(x), digits=2), c("",
         "Mean (SD)"=sprintf("%s (&plusmn; %s)", MEAN, SD)))
