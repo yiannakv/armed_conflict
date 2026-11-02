@@ -365,3 +365,8 @@ conflict_data_1 |>
   geom_boxplot(width=0.1)
 
 ```
+
+Save the conflict_1 df into a rds file! This saves data for future use in R format. We will use this for the next in class assignment. 
+```{r}
+saveRDS(conflict_data_1, "df_clean.rds")
+```
