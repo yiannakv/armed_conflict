@@ -26,14 +26,26 @@ df_diff_select <- df_diff |>
 
 
 #create a ggplot line graph, group_by ISO so that each colour is assigned 
-figure1 <- ggplot(df_diff_select, aes(x=year, y=maternal_mortality, colour=iso))+
-  scale_y_log10()+
-  geom_line(linewidth = 1.2) +
+figure1 <- ggplot(df_diff_select, aes(x = year, y = maternal_mortality,
+                                      colour = iso, group = iso)) +
+  geom_line(linewidth = 0.9, alpha = 0.85) +
+  scale_x_continuous(breaks = seq(2000, 2017, by = 2), expand = c(0.01, 0.01)) +
+  scale_y_log10() +
+  scale_colour_viridis_d(option = "D", end = 0.9) +
   labs(
     title = "Maternal Mortality Trends in Countries with an Overall Increase",
     subtitle = "Countries with higher maternal mortality in 2017 than in 2000",
     x = "Year",
-    y = "Log 10 Maternal Mortality",
-    colour = "Country")
+    y = "Maternal mortality (log10 scale)",
+    colour = "Country") +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(colour = "grey30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    legend.title = element_text(face = "bold")
+  )
    
 print(figure1)
