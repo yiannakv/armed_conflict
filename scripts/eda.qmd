@@ -21,7 +21,6 @@ library(ggplot2)
 library(naniar)
 library(tidyr)
 library(knitr)
-
 ```
 
 The goal of this report is to preform the preliminary data analysis in preparation for the panel regression we will be conducting. We are examining the association between armed conflict and several mortality outcomes. 
@@ -366,7 +365,12 @@ conflict_data|>
 
 ```
 
-Save the conflict_1 df into a rds file! This saves data for future use in R format. We will use this for the next in class assignment. 
+Save the conflict df into a rds file! This saves data for future use in R format. We will use this for the next in class assignment. 
 ```{r}
-saveRDS(conflict_data, "../processed/df_clean.rds") #the ../ means go up one level to processed
+library(here)
+
+saveRDS(
+  conflict_data,
+  here("data", "processed", "df_clean.rds")
+)
 ```
