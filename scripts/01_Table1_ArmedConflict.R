@@ -1,8 +1,7 @@
 install.packages("table1")
 install.packages("Hmisc")
+
 library(table1)
-
-
 library(Hmisc)
 
 #first we will source our data from the exploratory analysis 
@@ -53,3 +52,4 @@ caption <- "Table 1. Country baseline characteristics stratified by armed confli
 table1(~ pop_dens + gdp_1000 + age_dep + male_edu + temp + rainfall_1000 + urban +
          oecd + earthquake + drought | armed_conflict, data=df_clean, caption=caption, footnote=footnote,
        render.continuous=my.render.cont, render.categorical=my.render.cat)
+

@@ -153,9 +153,12 @@ Clearly we see maternal mortality is much lower compared to younger-onset mortal
 summary(raw_data$maternal_mortality)
 
 #lets examine the max observation 
+summary(raw_data$maternal_mortality)
 
-raw_data %>%
-  filter(maternal_mortality == max(maternal_mortality, na.rm = TRUE))
+raw_data |>
+  filter(maternal_mortality == max(maternal_mortality, na.rm = TRUE)) |>
+  select(iso, year, maternal_mortality, armed_conflict, total_conflicts) |>
+  kable(caption = "Country with Highest Maternal Mortality")
 ```
 
 Based on that observation -> SLE (Sierra Leonne), had 4493 conflicts 
@@ -174,6 +177,11 @@ First we convert to a factor variable rather than numerical
 conflict_data <- raw_data |> mutate(armed_conflict=as.factor(armed_conflict)) 
 summary(conflict_data$armed_conflict) #for counts 
 prop.table(table(conflict_data$armed_conflict)) #for proportions 
+
+#turn it back into numeric for purpose of regression fixed effects 
+conflict_data <- conflict_data |> mutate(armed_conflict=as.numeric(armed_conflict)) 
+
+
 ```
 
 81 % of countries across all years did not experience an armed conflict
@@ -199,7 +207,7 @@ ggplot(yearly, aes(x = year, y = percent_conflict)) +
 Now we need to examine the missingness within each variable. We will pay particular close attention to our exposure and outcomes of interest. 
 
 ```{r}
-pct_miss_case(conflict_data)
+naniar::pct_miss_case(conflict_data)
 ```
 
 85% of cases have some sort of missing value 
@@ -289,15 +297,7 @@ Overall we can say:
 
 **##Dealing with Missing Data!**
 
-We will use a complete case analysis approach to remove observations that are missing any of the outcomes and exposures. 
-
-```{r}
-conflict_data_1 <- conflict_data %>% 
-  drop_na(c(maternal_mortality, neonatal_mortality, infant_mortality, under5_mortality))
-
-
-nrow(conflict_data_1)
-```
+We will use a complete case analysis approach to remove observations that are missing any of the outcomes and exposures. **Do not do this, will mess up regression, ignore** 
 
 Therefore we can see a total of 444 observations were removed. We will likely use sensitivity analyses later on to check this decision. 
 
@@ -306,11 +306,11 @@ Therefore we can see a total of 444 observations were removed. We will likely us
 ```{r}
 #| echo: TRUE
 #| output: TRUE 
-conflict_data_1 |>
+conflict_data |>
   ggplot(aes(x = armed_conflict, y = maternal_mortality, alpha = 0.1)) +
   geom_boxplot()
 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = maternal_mortality, alpha = 0.1)) +
   geom_violin()+
   geom_boxplot(width=0.1)
@@ -325,11 +325,11 @@ Conflict group has a greater spread (values extend high). Seem to be very skewed
 ```{r}
 #| echo: TRUE
 #| output: TRUE 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = neonatal_mortality, alpha = 0.1)) +
   geom_boxplot()
 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = neonatal_mortality, alpha = 0.1)) +
   geom_violin()+
   geom_boxplot(width=0.1)
@@ -341,11 +341,11 @@ Similar trends for neonatal in terms of median in armed 0 vs 1. However much mor
 ```{r}
 #| echo: TRUE
 #| output: TRUE 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = infant_mortality, alpha = 0.1)) +
   geom_boxplot()
 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = infant_mortality, alpha = 0.1)) +
   geom_violin()+
   geom_boxplot(width=0.1)
@@ -355,11 +355,11 @@ conflict_data_1 |>
 ```{r}
 #| echo: TRUE
 #| output: TRUE 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = under5_mortality, alpha = 0.1)) +
   geom_boxplot()
 
-conflict_data_1 |>
+conflict_data|>
   ggplot(aes(x = armed_conflict, y = under5_mortality, alpha = 0.1)) +
   geom_violin()+
   geom_boxplot(width=0.1)
@@ -368,5 +368,5 @@ conflict_data_1 |>
 
 Save the conflict_1 df into a rds file! This saves data for future use in R format. We will use this for the next in class assignment. 
 ```{r}
-saveRDS(conflict_data_1, "df_clean.rds")
+saveRDS(conflict_data, "../processed/df_clean.rds") #the ../ means go up one level to processed
 ```
