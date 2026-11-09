@@ -1,4 +1,8 @@
 library(ggplot2)
+library(dplyr)
+
+setwd("C:/Users/iamvi/OneDrive - University of Toronto/Year 2/Computation for Health Data/armed_conflict/data/processed")
+
 
 #to generate the linegraph figure, we will first source the original data we had
 df_figure <- readRDS('df_clean.rds')
@@ -20,13 +24,14 @@ countries_keep <- df_diff |>
   pull(iso)
 
 
-#we are looking to see if the overall change is greaterthan 0 
+#we are looking to see if the overall change is greater than 0 
 df_diff_select <- df_diff |>
   filter(iso %in% countries_keep)
 
 
 #create a ggplot line graph, group_by ISO so that each colour is assigned 
-figure1 <- ggplot(df_diff_select, aes(x = year, y = maternal_mortality,
+
+   figure1 <- ggplot(df_diff_select, aes(x = year, y = maternal_mortality,
                                       colour = iso, group = iso)) +
   geom_line(linewidth = 0.9, alpha = 0.85) +
   scale_x_continuous(breaks = seq(2000, 2017, by = 2), expand = c(0.01, 0.01)) +
@@ -45,7 +50,12 @@ figure1 <- ggplot(df_diff_select, aes(x = year, y = maternal_mortality,
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank(),
     legend.position = "right",
-    legend.title = element_text(face = "bold")
-  )
-   
-print(figure1)
+    legend.title = element_text(face = "bold"))
+
+ggsave(
+  filename="figure1_maternalmorttrends.png",
+  plot = figure1,
+  path = "../../outputs",
+  width = 8,
+  height = 9,
+  dpi = 300)
