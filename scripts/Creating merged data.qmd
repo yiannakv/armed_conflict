@@ -13,16 +13,16 @@ geometry:
 #| warning: false
 library(tidyverse)
 library(knitr)
+#pak::pkg_install(c("kableExtra", "countrycode"), ask = FALSE)
+library(janitor)
 library(kableExtra)
 library(countrycode)
-library(janitor)
 ```
 
 
 First we will read in the maternal_mortality CSV
 ```{r}
 #| echo: TRUE
-
 matmor0 <- read.csv("data/raw/maternal_mortality.csv", header = TRUE)
 ```
 
@@ -102,8 +102,8 @@ kable(disaster_filter|> slice(1:10))
 Create a dummy variable! 
 ```{r}
 disaster_filter2 <- disaster_filter %>% 
-    mutate(earthquake = if_else(disaster_type=="Earthquake", 1, 0),
-           drought = if_else(disaster_type=="Drought", 1, 0)) %>%
+    mutate(earthquake = if_else(disaster_type=="Earthquake", 1, 0, missing=0), 
+           drought = if_else(disaster_type=="Drought", 1, 0, missing=0)) %>%
                     mutate(across(where(is.numeric), as.integer)) %>%
         group_by(year, iso) %>%
         summarize( #for each group (duplicate rows)
@@ -160,8 +160,13 @@ full_dataset_list <- list(matmor_long, neonatal_long, infant_long, under5_long, 
 
 merged_all <- full_dataset_list %>% reduce(left_join, by = c("iso", "year"))
 
+#make sure that the disaster, earthquake variable have 0 for those that have none 
+merged_all <- merged_all %>% mutate(earthquake = replace_na(earthquake,0),
+                                    drought = replace_na(drought,0))
+
+
 #save as a CSV file and add to proccessed folder 
-write.csv(merged_all, "Merged_Data.csv", row.names = FALSE)
+write.csv(merged_all, file="data/processed/Merged_Data.csv", row.names = FALSE)
 
 ```
 

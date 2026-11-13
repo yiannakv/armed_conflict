@@ -10,7 +10,7 @@ setwd("C:/Users/iamvi/OneDrive - University of Toronto/Year 2/Computation for He
 df_clean <- readRDS('df_clean.rds')
 
 df_clean$armed_conflict <- as.factor(df_clean$armed_conflict)
-df_clean$armed_conflict  <- factor(df_clean$armed_conflict, levels=1:2, labels=c("No Armed Conflict", "Yes Armed Conflict"))
+df_clean$armed_conflict  <- factor(df_clean$armed_conflict, levels=0:1, labels=c("No Armed Conflict", "Yes Armed Conflict"))
 df_clean$oecd     <- factor(df_clean$oecd, levels=0:1, labels=c("No", "Yes"))
 df_clean$earthquake  <- factor(df_clean$earthquake, levels=0:1, labels=c("No", "Yes"))
 df_clean$drought <- factor(df_clean$drought, levels=0:1, labels=c("No", "Yes"))
@@ -52,7 +52,7 @@ footnote <- paste(
 
 caption <- "Table 1. Country baseline characteristics stratified by armed conflict status"
 
-table1<-table1(~ pop_dens + gdp_1000 + age_dep + male_edu + temp + rainfall_1000 + urban +
+table1<-table1(~ pop_dens + maternal_mortality + gdp_1000 + age_dep + male_edu + temp + rainfall_1000 + urban +
          oecd + earthquake + drought | armed_conflict, data=df_clean, caption=caption, footnote=footnote,
        render.continuous=my.render.cont, render.categorical=my.render.cat)
 

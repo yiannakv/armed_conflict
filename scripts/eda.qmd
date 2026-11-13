@@ -37,7 +37,7 @@ We will begin by examining the variable types, names, and summary statistics.
 ```{r} 
 #| echo: TRUE
 
-raw_data <- read.csv("C:/Users/iamvi/OneDrive - University of Toronto/Year 2/Computation for Health Data/armed_conflict/data/processed/Merged_Data.csv", header=TRUE) |>
+raw_data <- read.csv("data/processed/Merged_Data.csv", header=TRUE) |>
     clean_names()
 
 head(raw_data)
@@ -178,9 +178,8 @@ summary(conflict_data$armed_conflict) #for counts
 prop.table(table(conflict_data$armed_conflict)) #for proportions 
 
 #turn it back into numeric for purpose of regression fixed effects 
-conflict_data <- conflict_data |> mutate(armed_conflict=as.numeric(armed_conflict)) 
-
-
+conflict_data <- conflict_data |>
+  mutate(armed_conflict = as.numeric(as.character(armed_conflict)))
 ```
 
 81 % of countries across all years did not experience an armed conflict
